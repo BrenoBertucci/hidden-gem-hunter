@@ -1,4 +1,4 @@
-import { Novel } from '../types';
+import { Novel, SourceSite } from '../types';
 import { MOCK_NOVEL_DATABASE } from './mockDb';
 import { TAG_DICTIONARY } from '../constants';
 
@@ -10,62 +10,57 @@ interface SearchResponse {
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export const searchNovels = async (activeTags: string[], excludedTags: string[]): Promise<SearchResponse> => {
-  // 1. Simulate Network Latency (Scraping time)
-  await delay(1500);
+// Helper to sanitize and map raw backend data to the frontend Novel interface
+const mapToNovel = (rawItem: any): Novel => {
+  return {
+    id: rawItem.id || crypto.randomUUID(),
+    titleJP: rawItem.titleJP || "Unknown Title",
+    titleEN_Adapted: rawItem.titleJP || "Untitled", // Fallback to JP title if no EN adaptation
+    synopsis: rawItem.synopsis || "No synopsis available.",
+    tags: rawItem.tags || [], // Ensure array
+    tagsJP: rawItem.tagsJP || [],
+    source: rawItem.source as SourceSite || SourceSite.SYOSETU, // Default to Syosetu if missing
+    author: rawItem.author || "Unknown Author",
+    url: rawItem.url || "#",
+    isOnNovelUpdates: rawItem.isOnNovelUpdates || false,
+    popularityScore: Math.floor(Math.random() * 100) // Mock score for now
+  };
+};
 
-  if (activeTags.length === 0) {
+export const searchNovels = async (activeTags: string[], excludedTags: string[]): Promise<SearchResponse> => {
+  const API_URL = 'http://localhost:3001/api/search';
+
+  // Translate tags to Japanese
+  const translatedTags = activeTags.map(tag => TAG_DICTIONARY[tag] || tag);
+  const translatedExcluded = excludedTags.map(tag => TAG_DICTIONARY[tag] || tag);
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tags: translatedTags,
+        excludedTags: translatedExcluded
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Map and sanitize results
+    const sanitizedResults = (data.results || []).map(mapToNovel);
+
+    return {
+      results: sanitizedResults,
+      totalFound: sanitizedResults.length,
+      filteredCount: 0 // Backend doesn't currently return filtered count
+    };
+
+  } catch (error) {
+    console.error("Erro de conexão:", error);
     return { results: [], totalFound: 0, filteredCount: 0 };
   }
-
-  // 2. "Search" the database
-  const rawMatches = MOCK_NOVEL_DATABASE.filter(novel => {
-    
-    // STEP A: Check Exclusions (Negative Filter)
-    // If the novel contains ANY of the excluded tags, remove it immediately.
-    const hasExcludedTag = excludedTags.some(exTag => {
-      const lowerEx = exTag.toLowerCase();
-      
-      // Check direct English match
-      if (novel.tags.includes(lowerEx)) return true;
-
-      // Check Mapped JP match
-      const jpEx = TAG_DICTIONARY[lowerEx];
-      if (jpEx && novel.tagsJP.some(t => t.includes(jpEx))) return true;
-
-      return false;
-    });
-
-    if (hasExcludedTag) return false;
-
-
-    // STEP B: Check Inclusions (Positive Filter)
-    // Check if the novel has ANY of the requested tags (OR logic)
-    return activeTags.some(term => {
-      const lowerTerm = term.toLowerCase();
-      
-      // Direct match in English tags
-      if (novel.tags.includes(lowerTerm)) return true;
-      
-      // Mapped match (User types 'revenge' -> maps to '復讐' -> checks JP tags)
-      const jpTerm = TAG_DICTIONARY[lowerTerm];
-      if (jpTerm && novel.tagsJP.some(t => t.includes(jpTerm))) return true;
-      
-      return false;
-    });
-  });
-
-  // 3. THE CORE FEATURE: Filter against "NovelUpdates"
-  const finalResults = rawMatches.filter(novel => !novel.isOnNovelUpdates);
-  
-  const filteredCount = rawMatches.length - finalResults.length;
-
-  // 4. Sort by "Popularity" (Mock)
-  finalResults.sort((a, b) => b.popularityScore - a.popularityScore);
-
-  return {
-    results: finalResults,
-    totalFound: rawMatches.length,
-    filteredCount
-  };
 };
