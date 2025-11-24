@@ -5,13 +5,13 @@ import { StatusConsole } from './components/StatusConsole';
 import { searchNovels } from './services/hunterEngine';
 import { Novel } from './types';
 import { PRESET_TAGS, TAG_DICTIONARY } from './constants';
-import { Search, Sparkles, Info, Wand2 } from 'lucide-react';
+import { Search, Sparkles, Info, Wand2, X, Trash2 } from 'lucide-react';
 
 export const GemHunter: React.FC = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [excludedTags, setExcludedTags] = useState<string[]>([]);
   const [description, setDescription] = useState('');
-  
+
   const [results, setResults] = useState<Novel[]>([]);
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
@@ -73,10 +73,13 @@ export const GemHunter: React.FC = () => {
     ]));
 
     allKnownTags.forEach(tag => {
-      // Regex checks for "no [tag]", "not [tag]", "without [tag]", "avoid [tag]"
-      const negativePattern = new RegExp(`\\b(no|not|without|hate|anti|avoid|stop)\\s+${tag}\\b`, 'i');
-      // Regex checks for just the word "[tag]"
-      const positivePattern = new RegExp(`\\b${tag}\\b`, 'i');
+      // Enhanced Regex for Negative Context
+      // Matches: "no [tag]", "not [tag]", "without [tag]", "avoid [tag]", "hate [tag]", "don't want [tag]"
+      const negativePattern = new RegExp(`\\b(no|not|without|hate|anti|avoid|stop|don't want|exclude)\\s+(?:a\\s+|an\\s+)?${tag}\\b`, 'i');
+
+      // Enhanced Regex for Positive Context
+      // Matches: "[tag]", "want [tag]", "like [tag]", "love [tag]", "with [tag]"
+      const positivePattern = new RegExp(`\\b(want|like|love|with|include|show|find)?\\s*(?:a\\s+|an\\s+)?${tag}\\b`, 'i');
 
       if (negativePattern.test(lowerDesc)) {
         // Found negative context -> Add to Excluded, Remove from Included
@@ -91,6 +94,10 @@ export const GemHunter: React.FC = () => {
 
     setSelectedTags(Array.from(nextIncluded));
     setExcludedTags(Array.from(nextExcluded));
+  };
+
+  const handleClearDescription = () => {
+    setDescription('');
   };
 
   const handleSearch = async () => {
@@ -113,23 +120,23 @@ export const GemHunter: React.FC = () => {
     try {
       // Execute simulated search
       const response = await searchNovels(selectedTags, excludedTags);
-      
+
       // Simulate granular updates for effect
       setTimeout(() => setLogs(prev => [...prev, `Accessing syosetu.com (N-code)...`]), 300);
       setTimeout(() => setLogs(prev => [...prev, `Accessing kakuyomu.jp...`]), 600);
       setTimeout(() => setLogs(prev => [...prev, `Found ${response.totalFound} potential matches.`]), 900);
       setTimeout(() => setLogs(prev => [...prev, `Cross-referencing with NovelUpdates.com database...`]), 1200);
-      
+
       setTimeout(() => {
         if (response.filteredCount > 0) {
           setLogs(prev => [...prev, `⚠️ FILTERED OUT ${response.filteredCount} titles (Already Translated/Licensed).`]);
         }
         setLogs(prev => [...prev, `✅ SEARCH COMPLETE. Found ${response.results.length} Hidden Gems.`]);
-        
+
         setResults(response.results);
         setFilteredCount(response.filteredCount);
         setLoading(false);
-        
+
         // Smooth scroll to results
         if (resultsRef.current) {
           setTimeout(() => {
@@ -147,7 +154,7 @@ export const GemHunter: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 md:py-12">
-      
+
       {/* Header Section */}
       <div className="text-center mb-12 space-y-4">
         <div className="inline-flex items-center justify-center p-3 bg-indigo-500/10 rounded-2xl mb-4 ring-1 ring-indigo-500/30 shadow-lg shadow-indigo-500/20">
@@ -158,7 +165,7 @@ export const GemHunter: React.FC = () => {
         </div>
         <p className="text-slate-400 text-lg max-w-2xl mx-auto">
           Find untranslated Japanese web novels ("Raws") that <span className="text-indigo-400 font-bold">do not exist</span> on NovelUpdates.
-          <br/>
+          <br />
           <span className="text-sm text-slate-500 mt-2 block opacity-80">(Simulates filtering out popular/licensed series to find the deep cuts)</span>
         </p>
       </div>
@@ -169,7 +176,7 @@ export const GemHunter: React.FC = () => {
           <Search size={18} />
           <h2>Search Configuration</h2>
         </div>
-        
+
         {/* Magic Description Box */}
         <div className="mb-8 bg-slate-950/50 p-4 rounded-xl border border-slate-700/50">
           <div className="flex justify-between items-center mb-2">
@@ -180,43 +187,56 @@ export const GemHunter: React.FC = () => {
             <span className="text-xs text-slate-600 font-mono">{description.length}/300</span>
           </div>
           <div className="relative">
-            <textarea 
+            <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={300}
               placeholder="e.g. I want an Isekai with Revenge but no Harem and without Cheat skills..."
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none h-20 placeholder-slate-600"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none h-24 placeholder-slate-600 pr-24"
             />
-            <button 
-              onClick={handleAnalyzeDescription}
-              disabled={!description.trim()}
-              className="absolute bottom-3 right-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded-md transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Wand2 size={12} />
-              Generate Tags
-            </button>
+
+            {/* Action Buttons */}
+            <div className="absolute bottom-3 right-3 flex gap-2">
+              {description && (
+                <button
+                  onClick={handleClearDescription}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs px-2 py-1.5 rounded-md transition-colors flex items-center gap-1"
+                  title="Clear text"
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
+              <button
+                onClick={handleAnalyzeDescription}
+                disabled={!description.trim()}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded-md transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20"
+              >
+                <Wand2 size={12} />
+                Auto-Tag
+              </button>
+            </div>
           </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
           {/* Section 1: Include */}
           <div>
-            <TagSelector 
+            <TagSelector
               title="Must Include (Tags)"
               variant="include"
-              selectedTags={selectedTags} 
-              onToggleTag={toggleTag} 
+              selectedTags={selectedTags}
+              onToggleTag={toggleTag}
               onAddCustomTag={addCustomTag}
             />
           </div>
-          
+
           {/* Section 2: Exclude */}
           <div className="md:border-l border-slate-800 md:pl-8">
-            <TagSelector 
+            <TagSelector
               title="Must Exclude (Not allowed)"
               variant="exclude"
-              selectedTags={excludedTags} 
-              onToggleTag={toggleExcludedTag} 
+              selectedTags={excludedTags}
+              onToggleTag={toggleExcludedTag}
               onAddCustomTag={addCustomExcludedTag}
             />
           </div>
@@ -260,8 +280,8 @@ export const GemHunter: React.FC = () => {
               </h2>
               {filteredCount > 0 && (
                 <div className="flex items-center gap-2 text-amber-400/80 text-sm bg-amber-900/20 px-3 py-1 rounded-full border border-amber-900/30">
-                   <Info size={14} />
-                   <span>{filteredCount} Popular titles hidden</span>
+                  <Info size={14} />
+                  <span>{filteredCount} Popular titles hidden</span>
                 </div>
               )}
             </div>

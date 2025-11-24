@@ -13,7 +13,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({ novel }) => {
       {/* Header: Source Badge */}
       <div className="flex justify-between items-start mb-4">
         <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wider
-          ${novel.source === SourceSite.SYOSETU ? 'bg-blue-900/30 text-blue-400 border border-blue-800' : 'bg-orange-900/30 text-orange-400 border border-orange-800'}
+          ${novel.source === SourceSite.SYOSETU ? 'bg-orange-900/30 text-orange-400 border border-orange-800' : 'bg-blue-900/30 text-blue-400 border border-blue-800'}
         `}>
           {novel.source}
         </span>

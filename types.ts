@@ -1,6 +1,6 @@
 export enum SourceSite {
   KAKUYOMU = 'Kakuyomu',
-  SYOSETU = 'Shosetsuka ni Narou'
+  SYOSETU = 'Syosetsu'
 }
 
 export interface Novel {

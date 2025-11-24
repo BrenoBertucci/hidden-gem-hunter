@@ -118,5 +118,19 @@ export const MOCK_NOVEL_DATABASE: Novel[] = [
     url: 'https://kakuyomu.jp/mock6',
     isOnNovelUpdates: false,
     popularityScore: 2100
+  },
+  // Scenario: Modern / Dungeon / Streaming
+  {
+    id: 'hidden-7',
+    titleJP: '東京ダンジョン配信　～底辺配信者が最強の探索者になるまで～',
+    titleEN_Adapted: 'Tokyo Dungeon Streaming ~From Bottom-Tier Streamer to the Strongest Seeker~',
+    synopsis: 'Dungeons suddenly appeared in modern Tokyo. The protagonist is a poor streamer who accidentally stumbles into a hidden boss room. He survives and gains a unique skill that makes his viewers\' donations boost his stats.',
+    tags: ['modern', 'dungeon', 'streaming', 'action'],
+    tagsJP: ['現代', 'ダンジョン', '配信', 'アクション'],
+    source: SourceSite.KAKUYOMU,
+    author: 'StreamerX',
+    url: 'https://kakuyomu.jp/mock7',
+    isOnNovelUpdates: false,
+    popularityScore: 5500
   }
 ];
